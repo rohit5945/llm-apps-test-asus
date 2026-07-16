@@ -38,7 +38,21 @@ describe('browse_products_by_series handler', () => {
 
     test('unknown series returns no results', async () => {
         const out = await handler({ category: 'Zenbook X' })
-        expect(out.content[0].text).toMatch(/no zenbook models|no .* found/i)
+        expect(out.content[0].text).toMatch(/no .* found/i)
         expect(out.structuredContent.products).toEqual([])
+    })
+
+    test('accepts a brand_line shorthand like "rog"', async () => {
+        const out = await handler({ category: 'rog' })
+        const products = out.structuredContent.products
+        expect(products.length).toBeGreaterThan(0)
+        expect(products.every((p) => p.brand_line === 'rog')).toBe(true)
+    })
+
+    test('accepts a use_case shorthand like "gaming"', async () => {
+        const out = await handler({ category: 'gaming' })
+        const products = out.structuredContent.products
+        expect(products.length).toBeGreaterThan(0)
+        expect(products.every((p) => (p.use_cases || []).includes('gaming'))).toBe(true)
     })
 })
