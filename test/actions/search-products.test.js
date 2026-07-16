@@ -7,12 +7,6 @@ describe('search_products handler', () => {
         expect(out.content[0]).toMatchObject({ type: 'text', text: expect.any(String) });
     });
 
-    test('"Show me some ASUS Zenbook laptops" returns Zenbook models', async () => {
-        const out = await handler({});
-        expect(out.content[0].text).toMatch(/Zenbook/i);
-        expect(out.structuredContent.products.length).toBeGreaterThan(0);
-    });
-
     test('structuredContent is a plain object, not a bare array', async () => {
         const out = await handler({});
         expect(typeof out.structuredContent).toBe('object');
@@ -37,6 +31,34 @@ describe('search_products handler', () => {
     test('returns no results for an unmatched query', async () => {
         const out = await handler({ query: 'zzzznotarealmodel' });
         expect(out.structuredContent.products).toHaveLength(0);
-        expect(out.content[0].text).toMatch(/no asus zenbook models found/i);
+        expect(out.content[0].text).toMatch(/no asus laptops found/i);
+    });
+
+    test('"gaming laptop under $1200" — use_case + max_price filters find TUF/Vivobook, not ROG flagships', async () => {
+        const out = await handler({ use_case: 'gaming', max_price: 1200 });
+        const products = out.structuredContent.products;
+        expect(products.length).toBeGreaterThan(0);
+        expect(products.every((p) => p.price_usd <= 1200)).toBe(true);
+        expect(products.some((p) => p.id === 'tuf-gaming-a15-fa507')).toBe(true);
+        expect(products.some((p) => p.id === 'rog-strix-scar18-g834')).toBe(false);
+    });
+
+    test('gpu_tier filters out laptops below the requested tier', async () => {
+        const out = await handler({ gpu_tier: 'high' });
+        const products = out.structuredContent.products;
+        expect(products.length).toBeGreaterThan(0);
+        expect(products.every((p) => ['high', 'enthusiast'].includes(p.gpu_tier))).toBe(true);
+    });
+
+    test('sort_by price_asc returns ascending price order', async () => {
+        const out = await handler({ use_case: 'gaming', sort_by: 'price_asc', limit: 10 });
+        const prices = out.structuredContent.products.map((p) => p.price_usd);
+        const sorted = [...prices].sort((a, b) => a - b);
+        expect(prices).toEqual(sorted);
+    });
+
+    test('limit is capped at 10', async () => {
+        const out = await handler({ limit: 999 });
+        expect(out.structuredContent.products.length).toBeLessThanOrEqual(10);
     });
 });
