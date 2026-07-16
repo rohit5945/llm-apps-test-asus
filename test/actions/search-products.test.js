@@ -61,4 +61,25 @@ describe('search_products handler', () => {
         const out = await handler({ limit: 999 });
         expect(out.structuredContent.products.length).toBeLessThanOrEqual(10);
     });
+
+    test('bare "Zenbook" in category expands to the whole family, not just an exact-category match', async () => {
+        const out = await handler({ category: 'Zenbook' });
+        const products = out.structuredContent.products;
+        expect(products.length).toBe(7);
+        expect(products.every((p) => p.brand_line === 'zenbook')).toBe(true);
+    });
+
+    test('"Zenbook S" (not a bare brand token) still means exactly that sub-series', async () => {
+        const out = await handler({ category: 'Zenbook S' });
+        const products = out.structuredContent.products;
+        expect(products.length).toBe(2);
+        expect(products.every((p) => p.category === 'Zenbook S')).toBe(true);
+    });
+
+    test('bare "gaming" in category expands via use_case, same as the use_case param', async () => {
+        const out = await handler({ category: 'gaming' });
+        const products = out.structuredContent.products;
+        expect(products.length).toBeGreaterThan(2);
+        expect(products.every((p) => (p.use_cases || []).includes('gaming'))).toBe(true);
+    });
 });

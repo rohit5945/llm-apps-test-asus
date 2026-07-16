@@ -2,11 +2,13 @@ const { CATALOG, toCard } = require('../../lib/catalog');
 const { searchProducts } = require('../../lib/search');
 
 // `category` originally meant "exact Zenbook series name". We keep that
-// contract, and additionally accept a brand_line (rog | tuf | vivobook |
-// zenbook | proart) or use_case (gaming | creator | ...) in the same param
-// so "browse ROG laptops" and "browse gaming laptops" both work without a
-// breaking schema change. See docs/ACTIONS_UI_SETUP.md.
-module.exports = async ({ category = '', max_price, sort_by, limit = 10 } = {}) => {
+// contract; lib/search.js additionally expands a bare brand_line (rog | tuf
+// | vivobook | zenbook | proart) or use_case (gaming | creator | ...) passed
+// through this same param into a whole-family match, so "browse ROG
+// laptops" / "browse gaming laptops" / "show me zenbook laptops" all return
+// every matching model instead of only the 1-2 that literally have that
+// string as their exact category. See docs/ACTIONS_UI_SETUP.md.
+module.exports = async ({ category = '', max_price, sort_by, limit } = {}) => {
   if (!category || typeof category !== 'string' || !category.trim()) {
     return {
       content: [{ type: 'text', text: 'Please provide a category (series, brand line, or use case) to browse, e.g. "ROG Strix", "rog", or "gaming".' }],
@@ -16,18 +18,7 @@ module.exports = async ({ category = '', max_price, sort_by, limit = 10 } = {}) 
   }
 
   const trimmed = category.trim();
-  const lower = trimmed.toLowerCase();
-  const knownBrandLines = ['zenbook', 'rog', 'tuf', 'vivobook', 'proart'];
-  const knownUseCases = ['gaming', 'creator', 'student', 'productivity', 'business', 'travel', 'budget', 'professional'];
-
-  let filters = { category: trimmed, max_price, sort_by, limit };
-  if (knownBrandLines.includes(lower)) {
-    filters = { brand_line: lower, max_price, sort_by, limit };
-  } else if (knownUseCases.includes(lower)) {
-    filters = { use_case: lower, max_price, sort_by, limit };
-  }
-
-  const { results } = searchProducts(CATALOG, filters);
+  const { results } = searchProducts(CATALOG, { category: trimmed, max_price, sort_by, limit });
 
   if (results.length === 0) {
     return {
