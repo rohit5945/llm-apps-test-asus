@@ -115,8 +115,9 @@ README in the backend PR for why this is a single tool instead of four.
 
 - **Description**: "Add, update, remove, view, or clear items in the user's
   ASUS shopping cart. IMPORTANT: this tool returns a `session_id` — always
-  reuse the *same* session_id on every later manage-cart or checkout call in
-  this conversation so the cart persists; do not generate your own."
+  reuse the *same* session_id on every later manage-cart, view-cart,
+  get-recommendations or checkout call in this conversation so the cart
+  persists; do not generate your own."
 - **inputSchema**:
 
 ```json
@@ -136,6 +137,68 @@ README in the backend PR for why this is a single tool instead of four.
   (`.../cart-demo`), same `script_url` as the others.
 - **Annotations**: this tool has side effects (add/update/remove/clear all
   mutate state) — do **not** mark it `readOnlyHint: true` the way `echo` is.
+- Also covers accessories now (mouse, dock, sleeve, monitors, portable SSD)
+  — `product_name`/`product_id` resolve against the combined laptop +
+  accessory catalog, so no separate tool is needed to add an accessory to
+  the cart.
+
+## view-cart (new)
+
+A dedicated read-only tool that mirrors `manage-cart`'s `operation: "view"`,
+added because hosts are noticeably more reliable at picking a
+single-purpose "show me my cart"-shaped tool than at picking the right
+`operation` value on a general cart tool.
+
+- **Description**: "Show the current contents of the user's ASUS shopping
+  cart — items, quantities, subtotal, and free-shipping progress. Use this
+  whenever the user asks to see, view, or check their cart. Requires the
+  session_id from a prior manage-cart call; if there isn't one yet, treat
+  the cart as empty."
+- **inputSchema**:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "session_id": { "type": "string", "description": "Cart session id returned by a previous manage-cart call" }
+  }
+}
+```
+- **Widget**: EDS, `widget_embed_url` → the same `cart` demo page as
+  `manage-cart` (`.../cart-demo`) — both tools render the identical cart
+  widget/structuredContent shape.
+- **Annotations**: read-only, safe to mark `readOnlyHint: true`.
+
+## get-recommendations (new)
+
+Personalized cross-sell/upsell tool. Basis is chosen automatically: a named
+product (content-based on that item), falling back to the last item added
+to the session's cart, falling back to a curated trending list if neither
+is available.
+
+- **Description**: "Get personalized ASUS product recommendations —
+  similar or complementary laptops and accessories (mice, docks, sleeves,
+  monitors, storage). Pass product_name/product_id when the user is looking
+  at a specific laptop (\"what goes well with the Zenbook S 16\"), pass
+  session_id to base recommendations on their cart, or call with neither for
+  general trending picks. Also call this proactively after a successful
+  add-to-cart to surface complementary accessories."
+- **inputSchema**:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "product_name": { "type": "string", "description": "Laptop the recommendations should be based on" },
+    "product_id": { "type": "string", "description": "Exact catalog id, if already known" },
+    "session_id": { "type": "string", "description": "Cart session id — used to base recommendations on the last item added to cart if no product is specified" },
+    "limit": { "type": "number", "description": "Max recommendations to return, default 4, max 6" }
+  }
+}
+```
+- **Widget**: EDS, `widget_embed_url` → the `recommendations` demo page
+  (`.../recommendations-demo`), same `script_url` as the others.
+- **Annotations**: read-only, safe to mark `readOnlyHint: true`.
 
 ## checkout (new)
 
@@ -154,27 +217,36 @@ README in the backend PR for why this is a single tool instead of four.
   "required": ["session_id"]
 }
 ```
-- **Widget**: none needed — text-only response is enough for a demo
-  checkout; give it a `structuredContent`-aware EDS widget later if you wire
-  a real order API.
+- **Widget**: EDS, `widget_embed_url` → the new `checkout-confirmation`
+  demo page (`.../checkout-confirmation-demo`), same `script_url` as the
+  others. This closes the "purchase flow dead-ends in plain text" gap —
+  checkout's `structuredContent` (items, subtotal, free-shipping status,
+  checkout_note) already matches what the widget expects, no action code
+  changes needed beyond what's already in `actions/checkout/index.js`.
 
 ## Known gaps to flag back to the team
 
 - **Catalog is still mock data.** `lib/catalog.js` has ~17 realistic
-  Zenbook/ROG/TUF/Vivobook/ProArt records with price + specs, but it is not
-  a live feed. Swap it for a real API per the `TODO` comment at the top of
-  that file and in each action.
+  Zenbook/ROG/TUF/Vivobook/ProArt laptop records plus 6 cross-sell
+  accessories (mouse, dock, sleeve, 2 monitors, portable SSD) with price +
+  specs, but it is not a live feed. Swap it for a real API per the `TODO`
+  comment at the top of that file and in each action.
 - **Cart persistence uses Adobe I/O Runtime State** (via `@adobe/aio-sdk`,
   already a dependency) keyed by `session_id`, with an in-memory fallback
   for local dev. This works, but only as long as the host model faithfully
   echoes `session_id` back — there's no login/session of its own to rely on.
 - **Checkout is a demo.** No real order/payment API is wired up; see the
   `TODO` in `actions/checkout/index.js`.
+- **Recommendations are catalog-derived, not ML-based.** `get-recommendations`
+  uses simple same-brand/same-use-case/co-purchase heuristics
+  (`actions/get-recommendations/index.js`) — good enough for a demo, but
+  swap in a real recommendation service before relying on this for
+  production personalization.
 - **Product images**: only the original 7 Zenbook items have real
   `image_url`s pulled from `dlcdnwebimgs.asus.com`. The ROG/TUF/Vivobook/
-  ProArt additions ship with `image_url: null` and fall back to a themed
-  color swatch in the widgets — add real image URLs when available rather
-  than guessing CDN paths.
+  ProArt/accessory additions ship with `image_url: null` and fall back to a
+  themed color swatch in the widgets — add real image URLs when available
+  rather than guessing CDN paths.
 - **Brand colors are a public approximation**, not the official Adobe/ASUS
   brand kit (see `scripts/asus-brand.js` in the EDS repo for the exact
   values and where to update them).
