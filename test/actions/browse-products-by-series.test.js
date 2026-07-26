@@ -32,7 +32,7 @@ describe('browse_products_by_series handler', () => {
     test('filters by category — only the requested series is returned', async () => {
         const out = await handler({ category: 'Zenbook A' })
         const products = out.structuredContent.products
-        expect(products.length).toBe(2)
+        expect(products.length).toBe(1)
         expect(products.every((p) => p.category === 'Zenbook A')).toBe(true)
     })
 

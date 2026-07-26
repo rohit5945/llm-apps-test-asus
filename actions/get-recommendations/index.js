@@ -4,7 +4,7 @@ const cart = require('../../lib/cart');
 // Curated "popular right now" fallback for when we have no product or cart
 // context to personalize from (e.g. the very first thing a user asks).
 // TODO: base this on real sales/analytics data once available.
-const TRENDING_IDS = ['rog-strix-scar18-g834', 'zenbook-s16-ux5606', 'asus-portable-ssd-1tb', 'rog-gladius-iii-mouse'];
+const TRENDING_IDS = ['rog-strix-scar18-2026', 'zenbook-s16-um5606', 'asus-portable-ssd-1tb', 'rog-gladius-iii-mouse'];
 
 function byRatingDesc(a, b) {
   return (b.rating || 0) - (a.rating || 0);

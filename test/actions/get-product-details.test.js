@@ -13,12 +13,12 @@ describe('get_product_details handler', () => {
         expect(out.structuredContent).toBeDefined();
         expect(out.structuredContent.name).toBe('ASUS Zenbook DUO (UX8407)');
         expect(out.structuredContent.category).toBe('Zenbook Duo');
-        expect(out.structuredContent.price_usd).toBe(1999);
+        expect(out.structuredContent.price_usd).toBe(2299);
     });
 
     test('resolves by product_id', async () => {
-        const out = await handler({ product_id: 'rog-strix-g16-g614' });
-        expect(out.structuredContent.name).toBe('ROG Strix G16 (G614)');
+        const out = await handler({ product_id: 'rog-strix-g16-2025' });
+        expect(out.structuredContent.name).toBe('ROG Strix G16 (2025)');
         expect(out.structuredContent.gpu_tier).toBe('mid');
     });
 

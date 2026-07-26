@@ -9,11 +9,11 @@ describe('manage_cart handler', () => {
     });
 
     test('add creates a cart and returns the same session_id on follow-up calls', async () => {
-        const added = await handler({ operation: 'add', product_name: 'TUF Gaming A15', quantity: 2 });
+        const added = await handler({ operation: 'add', product_name: 'TUF Gaming A16', quantity: 2 });
         const sessionId = added.structuredContent.session_id;
         expect(added.structuredContent.items).toHaveLength(1);
         expect(added.structuredContent.items[0].quantity).toBe(2);
-        expect(added.structuredContent.subtotal_usd).toBe(1998);
+        expect(added.structuredContent.subtotal_usd).toBe(2798);
 
         const viewed = await handler({ operation: 'view', session_id: sessionId });
         expect(viewed.structuredContent.items).toHaveLength(1);
@@ -29,17 +29,17 @@ describe('manage_cart handler', () => {
     });
 
     test('update changes quantity; quantity 0 / remove drops the line item', async () => {
-        const added = await handler({ operation: 'add', product_name: 'Vivobook Pro 15' });
+        const added = await handler({ operation: 'add', product_name: 'Vivobook S14' });
         const sessionId = added.structuredContent.session_id;
-        const updated = await handler({ operation: 'update', product_name: 'Vivobook Pro 15', quantity: 5, session_id: sessionId });
+        const updated = await handler({ operation: 'update', product_name: 'Vivobook S14', quantity: 5, session_id: sessionId });
         expect(updated.structuredContent.items[0].quantity).toBe(5);
 
-        const removed = await handler({ operation: 'remove', product_name: 'Vivobook Pro 15', session_id: sessionId });
+        const removed = await handler({ operation: 'remove', product_name: 'Vivobook S14', session_id: sessionId });
         expect(removed.structuredContent.items).toHaveLength(0);
     });
 
     test('clear empties the cart', async () => {
-        const added = await handler({ operation: 'add', product_name: 'Zenbook 14 (UM3406ZA)' });
+        const added = await handler({ operation: 'add', product_name: 'Zenbook A14' });
         const sessionId = added.structuredContent.session_id;
         const cleared = await handler({ operation: 'clear', session_id: sessionId });
         expect(cleared.structuredContent.items).toEqual([]);

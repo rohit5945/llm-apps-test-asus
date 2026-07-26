@@ -15,7 +15,7 @@ describe('get_recommendations handler', () => {
         const recs = out.structuredContent.recommendations;
         expect(recs.length).toBeGreaterThan(0);
         expect(recs.some((r) => r.is_accessory)).toBe(true);
-        expect(recs.some((r) => r.id === 'rog-strix-g16-g614')).toBe(false); // never recommend itself
+        expect(recs.some((r) => r.id === 'rog-strix-g16-2025')).toBe(false); // never recommend itself
     });
 
     test('product-based: recommends other laptops in the same brand line', async () => {
@@ -25,7 +25,7 @@ describe('get_recommendations handler', () => {
     });
 
     test('cart-based: falls back to the most recently added cart item when no product given', async () => {
-        const added = await cartHandler({ operation: 'add', product_name: 'ProArt Studiobook 16' });
+        const added = await cartHandler({ operation: 'add', product_name: 'ProArt PX13' });
         const sessionId = added.structuredContent.session_id;
         const out = await handler({ session_id: sessionId });
         expect(out.structuredContent.based_on).toBe('cart');

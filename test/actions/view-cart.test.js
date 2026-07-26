@@ -15,16 +15,16 @@ describe('view_cart handler', () => {
     });
 
     test('reflects items added via manage-cart', async () => {
-        const added = await cartHandler({ operation: 'add', product_name: 'TUF Gaming A15', quantity: 2 });
+        const added = await cartHandler({ operation: 'add', product_name: 'TUF Gaming A16', quantity: 2 });
         const sessionId = added.structuredContent.session_id;
         const out = await viewCartHandler({ session_id: sessionId });
         expect(out.structuredContent.items).toHaveLength(1);
-        expect(out.structuredContent.subtotal_usd).toBe(1998);
-        expect(out.content[0].text).toMatch(/TUF Gaming A15/);
+        expect(out.structuredContent.subtotal_usd).toBe(2798);
+        expect(out.content[0].text).toMatch(/TUF Gaming A16/);
     });
 
     test('surfaces free-shipping nudge below threshold and congrats above it', async () => {
-        const added = await cartHandler({ operation: 'add', product_name: 'TUF Gaming A15', quantity: 1 });
+        const added = await cartHandler({ operation: 'add', product_name: 'TUF Gaming A16', quantity: 1 });
         const sessionId = added.structuredContent.session_id;
         const below = await viewCartHandler({ session_id: sessionId });
         expect(below.structuredContent.qualifies_free_shipping).toBe(false);

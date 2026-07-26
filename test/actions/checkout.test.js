@@ -14,7 +14,7 @@ describe('checkout handler', () => {
     });
 
     test('checking out a non-empty cart returns an order summary and clears the cart', async () => {
-        const added = await cartHandler({ operation: 'add', product_name: 'TUF Gaming A15', quantity: 1 });
+        const added = await cartHandler({ operation: 'add', product_name: 'TUF Gaming A16', quantity: 1 });
         const sessionId = added.structuredContent.session_id;
 
         const out = await checkoutHandler({ session_id: sessionId });

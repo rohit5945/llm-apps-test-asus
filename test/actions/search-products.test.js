@@ -34,13 +34,13 @@ describe('search_products handler', () => {
         expect(out.content[0].text).toMatch(/no asus laptops found/i);
     });
 
-    test('"gaming laptop under $1200" — use_case + max_price filters find TUF/Vivobook, not ROG flagships', async () => {
-        const out = await handler({ use_case: 'gaming', max_price: 1200 });
+    test('"gaming laptop under $1500" — use_case + max_price filters find TUF value picks, not the ROG/TUF flagships', async () => {
+        const out = await handler({ use_case: 'gaming', max_price: 1500 });
         const products = out.structuredContent.products;
         expect(products.length).toBeGreaterThan(0);
-        expect(products.every((p) => p.price_usd <= 1200)).toBe(true);
-        expect(products.some((p) => p.id === 'tuf-gaming-a15-fa507')).toBe(true);
-        expect(products.some((p) => p.id === 'rog-strix-scar18-g834')).toBe(false);
+        expect(products.every((p) => p.price_usd <= 1500)).toBe(true);
+        expect(products.some((p) => p.id === 'tuf-gaming-a16-2025')).toBe(true);
+        expect(products.some((p) => p.id === 'rog-strix-scar18-2026')).toBe(false);
     });
 
     test('gpu_tier filters out laptops below the requested tier', async () => {
@@ -65,14 +65,14 @@ describe('search_products handler', () => {
     test('bare "Zenbook" in category expands to the whole family, not just an exact-category match', async () => {
         const out = await handler({ category: 'Zenbook' });
         const products = out.structuredContent.products;
-        expect(products.length).toBe(7);
+        expect(products.length).toBe(3);
         expect(products.every((p) => p.brand_line === 'zenbook')).toBe(true);
     });
 
     test('"Zenbook S" (not a bare brand token) still means exactly that sub-series', async () => {
         const out = await handler({ category: 'Zenbook S' });
         const products = out.structuredContent.products;
-        expect(products.length).toBe(2);
+        expect(products.length).toBe(1);
         expect(products.every((p) => p.category === 'Zenbook S')).toBe(true);
     });
 

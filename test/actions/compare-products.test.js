@@ -2,27 +2,27 @@ const handler = require('../../actions/compare-products/index.js');
 
 describe('compare_products handler', () => {
     test('compares two products by name', async () => {
-        const out = await handler({ product_names: ['ROG Strix G16', 'TUF Gaming F15'] });
+        const out = await handler({ product_names: ['ROG Strix G16', 'TUF Gaming A16'] });
         expect(Array.isArray(out.content)).toBe(true);
         expect(out.structuredContent.products).toHaveLength(2);
         expect(out.structuredContent.spec_fields.length).toBeGreaterThan(0);
     });
 
     test('compares by product_ids', async () => {
-        const out = await handler({ product_ids: ['rog-zephyrus-g14-ga403', 'proart-studiobook16-h7604'] });
+        const out = await handler({ product_ids: ['rog-zephyrus-g14-2025', 'proart-px13-hn7306'] });
         expect(out.structuredContent.products.map((p) => p.id)).toEqual(
-            expect.arrayContaining(['rog-zephyrus-g14-ga403', 'proart-studiobook16-h7604'])
+            expect.arrayContaining(['rog-zephyrus-g14-2025', 'proart-px13-hn7306'])
         );
     });
 
     test('flags the cheapest product as the price winner', async () => {
-        const out = await handler({ product_names: ['TUF Gaming A15', 'ROG Strix SCAR 18'] });
-        expect(out.structuredContent.best_per_row.price_usd).toBe('tuf-gaming-a15-fa507');
+        const out = await handler({ product_names: ['TUF Gaming A16', 'ROG Strix SCAR 18'] });
+        expect(out.structuredContent.best_per_row.price_usd).toBe('tuf-gaming-a16-2025');
     });
 
     test('caps comparison at 4 products', async () => {
         const out = await handler({
-            product_names: ['ROG Strix G16', 'TUF Gaming F15', 'Vivobook Pro 15', 'ProArt P16', 'Zenbook 14 (UM3406ZA)'],
+            product_names: ['ROG Strix G16', 'TUF Gaming A16', 'Vivobook S14', 'ProArt PX13', 'Zenbook A14'],
         });
         expect(out.structuredContent.products.length).toBeLessThanOrEqual(4);
     });
