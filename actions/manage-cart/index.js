@@ -1,4 +1,4 @@
-const { resolveProduct } = require('../../lib/catalog');
+const { resolveProduct, resolveWarrantyPlan } = require('../../lib/catalog');
 const cart = require('../../lib/cart');
 
 function shippingNote(cartState) {
@@ -11,12 +11,21 @@ function shippingNote(cartState) {
 // model only has to pick one tool for anything cart-related, instead of
 // juggling four near-identical ones. See docs/ACTIONS_UI_SETUP.md for the
 // input schema and for the session_id hand-off contract this relies on.
+//
+// Warranty plans (ASUS Premium Care / APC) are added through this same
+// "add" operation: pass `plan_id` (one of lib/catalog.js WARRANTY_PLANS —
+// apc-1yr | apc-2yr | apc-3yr-adp) plus `for_product_name`/`for_product_id`
+// naming the laptop line item the plan protects. That laptop must already
+// be in the cart; see the validation below.
 module.exports = async ({
   operation = 'view',
   product_id = '',
   product_name = '',
   quantity = 1,
   session_id = '',
+  plan_id = '',
+  for_product_id = '',
+  for_product_name = '',
 } = {}) => {
   const op = String(operation || 'view').toLowerCase();
   let sessionId = session_id && String(session_id).trim() ? String(session_id).trim() : null;
@@ -43,6 +52,36 @@ module.exports = async ({
     };
   }
 
+  // Adding a warranty plan is recognized by the presence of plan_id, so it
+  // shares the "add" operation instead of needing a whole new operation
+  // value for the host model to learn.
+  if (op === 'add' && plan_id) {
+    const forProduct = resolveProduct({ product_id: for_product_id, product_name: for_product_name });
+    if (!forProduct) {
+      return {
+        content: [{ type: 'text', text: `Please specify which laptop this protection plan is for using for_product_name or for_product_id — couldn't find "${for_product_id || for_product_name}".` }],
+      };
+    }
+    const plan = resolveWarrantyPlan({ plan_id });
+    if (!plan) {
+      return {
+        content: [{ type: 'text', text: `Unknown warranty plan "${plan_id}". Use one of: apc-1yr, apc-2yr, apc-3yr-adp (call get-warranty-options to see current pricing).` }],
+      };
+    }
+    const current = await cart.getCart(sessionId);
+    const alreadyInCart = current.items.some((i) => i.item_type !== 'warranty' && i.product_id === forProduct.id);
+    if (!alreadyInCart) {
+      return {
+        content: [{ type: 'text', text: `${forProduct.name} isn't in your cart yet — add the laptop before attaching a protection plan to it.` }],
+      };
+    }
+    const updated = await cart.addWarrantyItem(sessionId, plan, forProduct.id);
+    return {
+      content: [{ type: 'text', text: `Added ${plan.name} ($${plan.price_usd}) for your ${forProduct.name}. Subtotal: $${updated.subtotal_usd} (${updated.item_count} item${updated.item_count === 1 ? '' : 's'}).${shippingNote(updated)}${sessionNote}` }],
+      structuredContent: updated,
+    };
+  }
+
   if (op === 'add') {
     if (!product_id && !product_name) {
       return { content: [{ type: 'text', text: 'Please provide a product_name or product_id to add to the cart.' }] };
@@ -58,6 +97,21 @@ module.exports = async ({
     const updated = await cart.addItem(sessionId, product, qty);
     return {
       content: [{ type: 'text', text: `Added ${qty}x ${product.name} ($${product.price_usd} each) to your cart. Subtotal: $${updated.subtotal_usd} (${updated.item_count} item${updated.item_count === 1 ? '' : 's'}).${shippingNote(updated)}${sessionNote}` }],
+      structuredContent: updated,
+    };
+  }
+
+  // Removing a warranty plan is recognized the same way: plan_id present
+  // on a "remove" call means "remove this plan from that laptop", not
+  // "remove a laptop line item".
+  if (op === 'remove' && plan_id) {
+    const forProduct = resolveProduct({ product_id: for_product_id, product_name: for_product_name });
+    if (!forProduct) {
+      return { content: [{ type: 'text', text: 'Please specify which laptop\'s protection plan to remove using for_product_name or for_product_id.' }] };
+    }
+    const updated = await cart.removeWarrantyItem(sessionId, forProduct.id, plan_id);
+    return {
+      content: [{ type: 'text', text: `Removed protection plan from ${forProduct.name}. Subtotal: $${updated.subtotal_usd} (${updated.item_count} item${updated.item_count === 1 ? '' : 's'}).${sessionNote}` }],
       structuredContent: updated,
     };
   }

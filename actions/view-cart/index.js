@@ -1,10 +1,12 @@
 const cart = require('../../lib/cart');
 
-// A thin, dedicated wrapper around manage-cart's "view" operation. This
-// exists mainly so the host model has an obvious, high-confidence tool to
-// call for "show me my cart" / "what's in my cart" — manage-cart's
-// operation param works too, but a differently-named tool per intent
-// reduces the chance the model picks the wrong one or the wrong operation.
+// A thin, dedicated wrapper around manage-cart's "view" operation, with
+// per-item warranty upsell hints layered on top (see
+// lib/cart.js#annotateWarrantyUpsell). This tool exists mainly so the host
+// model has an obvious, high-confidence tool to call for "show me my
+// cart" / "what's in my cart" — manage-cart's operation param works too,
+// but a differently-named tool per intent reduces the chance the model
+// picks the wrong one or the wrong operation.
 module.exports = async ({ session_id = '' } = {}) => {
   const sessionId = session_id && String(session_id).trim();
 
@@ -15,7 +17,8 @@ module.exports = async ({ session_id = '' } = {}) => {
     };
   }
 
-  const current = await cart.getCart(sessionId);
+  const raw = await cart.getCart(sessionId);
+  const current = cart.annotateWarrantyUpsell(raw);
 
   if (current.items.length === 0) {
     return {

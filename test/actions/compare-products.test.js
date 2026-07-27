@@ -37,4 +37,18 @@ describe('compare_products handler', () => {
         const out = await handler({});
         expect(out.content[0].text).toMatch(/provide/i);
     });
+
+    test('catalog_options excludes products already being compared', async () => {
+        const out = await handler({ product_names: ['ROG Strix G16', 'TUF Gaming A16'] });
+        const ids = out.structuredContent.catalog_options.map((o) => o.id);
+        expect(ids).not.toEqual(expect.arrayContaining(['rog-strix-g16-2025', 'tuf-gaming-a16-2025']));
+        expect(out.structuredContent.catalog_options.length).toBeGreaterThan(0);
+        expect(out.structuredContent.catalog_options.length).toBeLessThanOrEqual(12);
+    });
+
+    test('catalog_options entries expose only id, name, brand_line', async () => {
+        const out = await handler({ product_names: ['ROG Strix G16', 'TUF Gaming A16'] });
+        const option = out.structuredContent.catalog_options[0];
+        expect(Object.keys(option).sort()).toEqual(['brand_line', 'id', 'name']);
+    });
 });

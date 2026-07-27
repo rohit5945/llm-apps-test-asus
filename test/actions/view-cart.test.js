@@ -35,4 +35,28 @@ describe('view_cart handler', () => {
         expect(above.structuredContent.qualifies_free_shipping).toBe(true);
         expect(above.content[0].text).toMatch(/free shipping/i);
     });
+
+    test('flags warranty_upsell true for a laptop with no attached plan', async () => {
+        const added = await cartHandler({ operation: 'add', product_name: 'TUF Gaming A16' });
+        const sessionId = added.structuredContent.session_id;
+        const out = await viewCartHandler({ session_id: sessionId });
+        const laptopLine = out.structuredContent.items.find((i) => i.item_type !== 'warranty');
+        expect(laptopLine.warranty_upsell).toBe(true);
+    });
+
+    test('warranty_upsell flips to false once a plan is attached', async () => {
+        const added = await cartHandler({ operation: 'add', product_name: 'TUF Gaming A16' });
+        const sessionId = added.structuredContent.session_id;
+        await cartHandler({
+            operation: 'add',
+            plan_id: 'apc-1yr',
+            for_product_name: 'TUF Gaming A16',
+            session_id: sessionId,
+        });
+        const out = await viewCartHandler({ session_id: sessionId });
+        const laptopLine = out.structuredContent.items.find((i) => i.item_type !== 'warranty');
+        expect(laptopLine.warranty_upsell).toBe(false);
+        const planLine = out.structuredContent.items.find((i) => i.item_type === 'warranty');
+        expect(planLine.warranty_upsell).toBeUndefined();
+    });
 });

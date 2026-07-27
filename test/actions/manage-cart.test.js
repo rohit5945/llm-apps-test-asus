@@ -55,4 +55,68 @@ describe('manage_cart handler', () => {
         const out = await handler({ operation: 'teleport' });
         expect(out.content[0].text).toMatch(/unknown cart operation/i);
     });
+
+    test('add a warranty plan for a laptop already in the cart', async () => {
+        const added = await handler({ operation: 'add', product_name: 'ROG Strix G16' });
+        const sessionId = added.structuredContent.session_id;
+        const withPlan = await handler({
+            operation: 'add',
+            plan_id: 'apc-3yr-adp',
+            for_product_name: 'ROG Strix G16',
+            session_id: sessionId,
+        });
+        expect(withPlan.structuredContent.items).toHaveLength(2);
+        const planLine = withPlan.structuredContent.items.find((i) => i.item_type === 'warranty');
+        expect(planLine).toBeDefined();
+        expect(planLine.plan_id).toBe('apc-3yr-adp');
+        expect(planLine.for_product_id).toBe('rog-strix-g16-2025');
+        expect(planLine.price_usd).toBe(209.99);
+        expect(withPlan.content[0].text).toMatch(/ASUS Premium Care/i);
+    });
+
+    test('rejects adding a warranty plan for a laptop that is not in the cart yet', async () => {
+        const started = await handler({ operation: 'view' });
+        const sessionId = started.structuredContent.session_id;
+        const out = await handler({
+            operation: 'add',
+            plan_id: 'apc-1yr',
+            for_product_name: 'ROG Strix G16',
+            session_id: sessionId,
+        });
+        expect(out.content[0].text).toMatch(/isn't in your cart yet/i);
+        expect(out.structuredContent).toBeUndefined();
+    });
+
+    test('rejects an unknown plan_id', async () => {
+        const added = await handler({ operation: 'add', product_name: 'ROG Strix G16' });
+        const sessionId = added.structuredContent.session_id;
+        const out = await handler({
+            operation: 'add',
+            plan_id: 'apc-9999yr',
+            for_product_name: 'ROG Strix G16',
+            session_id: sessionId,
+        });
+        expect(out.content[0].text).toMatch(/unknown warranty plan/i);
+    });
+
+    test('warranty plan cost counts toward subtotal and item_count', async () => {
+        const added = await handler({ operation: 'add', product_name: 'TUF Gaming A16', quantity: 1 });
+        const sessionId = added.structuredContent.session_id;
+        const withPlan = await handler({
+            operation: 'add',
+            plan_id: 'apc-2yr',
+            for_product_name: 'TUF Gaming A16',
+            session_id: sessionId,
+        });
+        expect(withPlan.structuredContent.subtotal_usd).toBeCloseTo(1399 + 149.99, 2);
+        expect(withPlan.structuredContent.item_count).toBe(2);
+    });
+
+    test('removing the laptop also removes its attached warranty plan', async () => {
+        const added = await handler({ operation: 'add', product_name: 'Zenbook A14' });
+        const sessionId = added.structuredContent.session_id;
+        await handler({ operation: 'add', plan_id: 'apc-1yr', for_product_name: 'Zenbook A14', session_id: sessionId });
+        const removed = await handler({ operation: 'remove', product_name: 'Zenbook A14', session_id: sessionId });
+        expect(removed.structuredContent.items).toHaveLength(0);
+    });
 });

@@ -1,4 +1,4 @@
-const { resolveProduct, toCard } = require('../../lib/catalog');
+const { resolveProduct, toCard, CATALOG } = require('../../lib/catalog');
 
 const SPEC_FIELDS = [
   { key: 'price_usd', label: 'Price', better: 'lower' },
@@ -65,12 +65,24 @@ module.exports = async ({ product_ids = [], product_names = [] } = {}) => {
   const lightest = products.reduce((a, b) => (b.weight_kg < a.weight_kg ? b : a));
   const summary = `Comparing ${products.map((p) => p.name).join(' vs ')}. Cheapest: ${cheapest.name} ($${cheapest.price_usd}). Lightest: ${lightest.name} (${lightest.weight_kg}kg).`;
 
+  // De-duplicated list of every laptop NOT already in this comparison, so
+  // the widget can render an "add another laptop to compare" picker
+  // without a second tool round-trip — the picker itself can't call tools
+  // directly. Real laptops only (CATALOG, not ACCESSORIES); capped at 12
+  // (CATALOG only has 11 today, so the cap is mostly future-proofing).
+  const selectedIds = new Set(products.map((p) => p.id));
+  const catalogOptions = CATALOG
+    .filter((p) => !selectedIds.has(p.id))
+    .slice(0, 12)
+    .map((p) => ({ id: p.id, name: p.name, brand_line: p.brand_line }));
+
   return {
     content: [{ type: 'text', text: summary }],
     structuredContent: {
       products: products.map(toCard),
       spec_fields: SPEC_FIELDS.map(({ key, label }) => ({ key, label })),
       best_per_row: bestPerRow,
+      catalog_options: catalogOptions,
     },
   };
 };
