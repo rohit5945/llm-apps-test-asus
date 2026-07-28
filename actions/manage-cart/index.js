@@ -1,10 +1,17 @@
 const { resolveProduct, resolveWarrantyPlan } = require('../../lib/catalog');
 const cart = require('../../lib/cart');
+const { getApplicableOffers } = require('../../lib/offers');
 
 function shippingNote(cartState) {
   if (cartState.qualifies_free_shipping) return ' You qualify for free shipping!';
   if (cartState.free_shipping_remaining_usd > 0) return ` Add $${cartState.free_shipping_remaining_usd} more for free shipping.`;
   return '';
+}
+
+function offersNote(offers) {
+  return offers && offers.length
+    ? ' You may also qualify for free Adobe Creative Cloud and other offers — ask to see them.'
+    : '';
 }
 
 // Single tool for all cart CRUD (add/update/remove/view/clear) so the host
@@ -38,10 +45,11 @@ module.exports = async ({
 
   if (op === 'view') {
     const current = await cart.getCart(sessionId);
+    const offers = getApplicableOffers(current.items);
     const text = current.items.length
-      ? `Cart (${current.item_count} item${current.item_count === 1 ? '' : 's'}): ${current.items.map((i) => `${i.quantity}x ${i.name}`).join(', ')}. Subtotal: $${current.subtotal_usd}.${shippingNote(current)}${sessionNote}`
+      ? `Cart (${current.item_count} item${current.item_count === 1 ? '' : 's'}): ${current.items.map((i) => `${i.quantity}x ${i.name}`).join(', ')}. Subtotal: $${current.subtotal_usd}.${shippingNote(current)}${offersNote(offers)}${sessionNote}`
       : `Your cart is empty.${sessionNote}`;
-    return { content: [{ type: 'text', text }], structuredContent: current };
+    return { content: [{ type: 'text', text }], structuredContent: { ...current, offers } };
   }
 
   if (op === 'clear') {
@@ -76,9 +84,10 @@ module.exports = async ({
       };
     }
     const updated = await cart.addWarrantyItem(sessionId, plan, forProduct.id);
+    const offers = getApplicableOffers(updated.items);
     return {
-      content: [{ type: 'text', text: `Added ${plan.name} ($${plan.price_usd}) for your ${forProduct.name}. Subtotal: $${updated.subtotal_usd} (${updated.item_count} item${updated.item_count === 1 ? '' : 's'}).${shippingNote(updated)}${sessionNote}` }],
-      structuredContent: updated,
+      content: [{ type: 'text', text: `Added ${plan.name} ($${plan.price_usd}) for your ${forProduct.name}. Subtotal: $${updated.subtotal_usd} (${updated.item_count} item${updated.item_count === 1 ? '' : 's'}).${shippingNote(updated)}${offersNote(offers)}${sessionNote}` }],
+      structuredContent: { ...updated, offers },
     };
   }
 
@@ -95,9 +104,10 @@ module.exports = async ({
     }
     const qty = Math.max(1, Number(quantity) || 1);
     const updated = await cart.addItem(sessionId, product, qty);
+    const offers = getApplicableOffers(updated.items);
     return {
-      content: [{ type: 'text', text: `Added ${qty}x ${product.name} ($${product.price_usd} each) to your cart. Subtotal: $${updated.subtotal_usd} (${updated.item_count} item${updated.item_count === 1 ? '' : 's'}).${shippingNote(updated)}${sessionNote}` }],
-      structuredContent: updated,
+      content: [{ type: 'text', text: `Added ${qty}x ${product.name} ($${product.price_usd} each) to your cart. Subtotal: $${updated.subtotal_usd} (${updated.item_count} item${updated.item_count === 1 ? '' : 's'}).${shippingNote(updated)}${offersNote(offers)}${sessionNote}` }],
+      structuredContent: { ...updated, offers },
     };
   }
 

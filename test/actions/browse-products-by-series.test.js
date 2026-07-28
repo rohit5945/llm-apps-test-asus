@@ -45,14 +45,16 @@ describe('browse_products_by_series handler', () => {
     test('accepts a brand_line shorthand like "rog"', async () => {
         const out = await handler({ category: 'rog' })
         const products = out.structuredContent.products
-        expect(products.length).toBeGreaterThan(0)
+        // 4 ROG models: Zephyrus G14, Strix SCAR 18, Strix G16, Flow Z13
+        expect(products.length).toBe(4)
         expect(products.every((p) => p.brand_line === 'rog')).toBe(true)
     })
 
     test('accepts a use_case shorthand like "gaming"', async () => {
         const out = await handler({ category: 'gaming' })
         const products = out.structuredContent.products
-        expect(products.length).toBeGreaterThan(0)
+        // 7 gaming laptops across ROG/TUF
+        expect(products.length).toBe(7)
         expect(products.every((p) => (p.use_cases || []).includes('gaming'))).toBe(true)
     })
 })

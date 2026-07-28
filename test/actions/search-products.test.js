@@ -65,7 +65,8 @@ describe('search_products handler', () => {
     test('bare "Zenbook" in category expands to the whole family, not just an exact-category match', async () => {
         const out = await handler({ category: 'Zenbook' });
         const products = out.structuredContent.products;
-        expect(products.length).toBe(3);
+        // 4 Zenbook models: Zenbook S16, Zenbook DUO, Zenbook A14, Zenbook 14 OLED (UX3405)
+        expect(products.length).toBe(4);
         expect(products.every((p) => p.brand_line === 'zenbook')).toBe(true);
     });
 
@@ -79,7 +80,8 @@ describe('search_products handler', () => {
     test('bare "gaming" in category expands via use_case, same as the use_case param', async () => {
         const out = await handler({ category: 'gaming' });
         const products = out.structuredContent.products;
-        expect(products.length).toBeGreaterThan(2);
+        // 7 gaming laptops: Zephyrus G14, Strix SCAR 18, Strix G16, Flow Z13, TUF A16, TUF A14, TUF F16
+        expect(products.length).toBe(7);
         expect(products.every((p) => (p.use_cases || []).includes('gaming'))).toBe(true);
     });
 });
