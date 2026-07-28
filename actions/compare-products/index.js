@@ -29,13 +29,27 @@ function computeBestPerRow(products) {
   return best;
 }
 
+// The Adobe LLM Apps UI's parameter builder only supports String / Number /
+// Integer / Boolean input types — there's no array type — so product_names
+// and product_ids have to be registered as plain String tools there, and
+// the host model will send a comma-separated string (e.g. "ROG Strix G16,
+// TUF Gaming A16") rather than a real array. Accept both shapes so this
+// keeps working whether the param ever gets set up as a true array (e.g.
+// via a raw schema import) or as a comma-separated string (the UI-entered
+// case, which is what we expect in production today).
+function toList(value) {
+  if (Array.isArray(value)) return value.map((v) => String(v).trim()).filter(Boolean);
+  if (typeof value === 'string') return value.split(',').map((v) => v.trim()).filter(Boolean);
+  return [];
+}
+
 module.exports = async ({ product_ids = [], product_names = [] } = {}) => {
-  const ids = Array.isArray(product_ids) ? product_ids : [];
-  const names = Array.isArray(product_names) ? product_names : [];
+  const ids = toList(product_ids);
+  const names = toList(product_names);
 
   if (ids.length === 0 && names.length === 0) {
     return {
-      content: [{ type: 'text', text: 'Please provide 2-4 product_names (or product_ids) to compare, e.g. ["ROG Strix G16", "TUF Gaming F15"].' }],
+      content: [{ type: 'text', text: 'Please provide 2-4 product_names (or product_ids) to compare, e.g. "ROG Strix G16, TUF Gaming A16".' }],
     };
   }
 
